@@ -1,0 +1,345 @@
+---
+title: "Stat 202, Project 1: NYC Housing "
+author: 
+- "Jessica Li"
+- "jli6"
+- "There should be no collaborators"
+date: "Due 3/9/18 at 11:59 pm"
+output: 
+  html_document:
+    toc:  true
+    toc_float:  true
+    code_folding:  show
+    theme: cosmo
+---
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+###########################
+# RUN THIS BEFORE STARTING
+###########################
+
+library("tidyverse")
+library("knitr")
+library("pander") 
+library("car")
+
+```
+
+```{r, include=FALSE}
+###########################
+# STYLE EDITS: IGNORE THIS
+###########################
+
+knitr::opts_chunk$set(message = FALSE) # include this if you don't want markdown to knit messages
+knitr::opts_chunk$set(warning = FALSE) # include this if you don't want markdown to knit warnings
+knitr::opts_chunk$set(echo=FALSE) # set echo=FALSE to hide code from html output
+
+```
+#  Introduction
+
+You hear about it all on the news, the exorbitant prices of the apartments and houses in New York. Some people get kicked out because they cannot afford the rent if if they had been living there for years in a closet sized room. Although NYC is one of the biggest hubs in the United States, I do not think the living situation can get more cramped. Sometimes I would wonder if I would ever be able to live there; and not just to live but to live nicely even if I was a millionare. How nice can an apartment get, and how much would a certain sum get me?
+
+Therefore, for my study is that I want to know is the relationship between salaries and That is the main modeling goal: Are there any predictors to the amount of shares that an article gets?
+
+
+# Exploratory Data Analysis
+
+## Data
+
+
+```{r, message=FALSE}
+# Where is the data stored?
+data_location <- "http://stat.cmu.edu/202/data/NYCHousing_project1.csv"
+
+# Read in the data
+housing <- read_csv(data_location)
+
+# Examine data
+length(housing$Income)
+firsthousing<- kable(head(housing)) # get a table of the first 6 lines of data
+(firsthousing)
+
+```
+
+In the data, we analyse a random sample of 339 families and 4 variables. We examine the relationship between the response variable, the income, and three explanatory variables, also known as the predictors of interest: Age, MaintenanceDef and NycMove. The income is total household income (in $). The age is the respondant's age (in years); the MaintenanceDef is the number of maintenance deficiences between 2002 and 2005. And finally, the NYCMove is the year the respondent moved to New York City 
+
+
+## Univariate exploration
+
+```{r, fig.height=7, fig.width=11}
+#######
+#GRAPHS
+#######
+par(mfrow=c(2, 2)) # for 4 graphs in a 2x2 table
+hist(housing$Income,
+     main = "Income",
+     xlab = "Income ($)")
+
+hist(housing$Age,
+     main = "Age",
+     xlab = "Number in Years")
+hist(housing$MaintenanceDef,
+     main = "MaintenanceDef",
+     xlab = "Number of maintenance deficiencies (since 2002 to 2005)")
+hist(housing$NYCMove,
+     main = "NYCMove",
+     xlab = "Year moved to NYC")
+
+#######
+#TABLE
+#######
+
+x1 <- housing %>%
+  dplyr::summarize(Min  = min(Income, na.rm = TRUE),
+  Q1 = quantile(Income)[2],
+  Median = quantile(Income)[3],
+  Mean = mean(Income, na.rm = TRUE),
+  Q3 = quantile(Income)[4],
+  Max = max(Income, na.rm = TRUE),
+  SD = sd(Income, na.rm = TRUE)) 
+
+x2 <- housing %>%
+  dplyr::summarize(Min  = min(Age, na.rm = TRUE),
+  Q1 = quantile(Age)[2],
+  Median = quantile(Age)[3],
+  Mean = mean(Age, na.rm = TRUE),
+  Q3 = quantile(Age)[4],
+  Max = max(Age, na.rm = TRUE),
+  SD = sd(Age, na.rm = TRUE)) 
+
+x3 <- housing %>%
+  dplyr::summarize(Min  = min(MaintenanceDef, na.rm = TRUE),
+  Q1 = quantile(MaintenanceDef)[2],
+  Median = quantile(MaintenanceDef)[3],
+  Mean = mean(MaintenanceDef, na.rm = TRUE),
+  Q3 = quantile(MaintenanceDef)[4],
+  Max = max(MaintenanceDef, na.rm = TRUE),
+  SD = sd(MaintenanceDef, na.rm = TRUE)) 
+
+x4 <- housing %>%
+  dplyr::summarize(Min  = min(NYCMove, na.rm = TRUE),
+  Q1 = quantile(NYCMove)[2],
+  Median = quantile(NYCMove)[3],
+  Mean = mean(NYCMove, na.rm = TRUE),
+  Q3 = quantile(NYCMove)[4],
+  Max = max(NYCMove, na.rm = TRUE),
+  SD = sd(NYCMove, na.rm = TRUE))
+
+cont.vars <- rbind(x1, x2, x3, x4)
+rownames(cont.vars) <- c("Income", "Age", "MaintenanceDef", "NYCMove")
+kable(cont.vars, caption = "Continuous Variables", row.names = TRUE)
+
+
+```
+
+In the graphs it can be seen that income is skewed to the right and is unimodal. The mean is 52493.719764 dollars, the median is 41500 dollars and the standard deviation is 37801.650495 dollars. Age is skewed a little to the right but is generally normal and is unimodal. The mean is 50.120944 years, the median is 49 years and the standard deviation is 12.56 years. MaintenanceDef is very skewed to the right and is unimodal. The mean is 1.85 deficiency, the median is 1 deficiency, and the standard deviation is 1.573 deficiencies. NYCMove is very skewed to the left and is bimodal. The mean is 1982, the median is 1973, and the standard deviation is 13.84 years.
+
+
+
+## Bivariate exploration
+
+### Predictor variables
+
+```{r, fig.height=10, fig.width=15}
+par(mfrow=c(2, 2))
+
+plot(housing$Age, housing$Income,
+     main = "Income by Age",
+     xlab = "Age", ylab = "Income")
+
+plot(housing$MaintenanceDef, housing$Income,
+     main = "Income by MaintenanceDef",
+     xlab = "Maintenance Deficiencies", ylab = "Income")
+
+plot(housing$NYCMove, housing$Income,
+     main = "Income by NYCMove",
+     xlab = "Year Moved", ylab = "Income")
+
+
+```
+
+The relationship between income and age is not linear and is very weak, as lot of the points are scattered.The maintenance deficienies are quite the opposite though, they seem quite negative and linear in direction with income. The higher the maintenance deficiencies the lower the income. The income by NYCMove seems to have a linear-esqu negative slope if there is a stretching it but is has a weak correlation. 
+
+
+# Modeling
+\ 
+
+
+We are beginning to make a linear regression model to predict income. We do this by first looking at the histograms and the scatterplots. 
+
+What we can first see is that Income does not look normal, so what we must first do is transform it is normal.
+
+```{r}
+############################
+#Transform Income
+############################
+housing <- mutate(housing, log_income = log(Income))
+hist(housing$log_income,
+     main = "Income",
+     xlab = "Income ($)")
+
+lm_A <- lm(housing$Income ~ housing$Income)
+
+qqPlot(lm_A$residuals)
+
+```
+
+
+Now we see that it is still not perfectly normal, but that can be excused with the fact that we have a very large population sample of n=339 households.
+
+
+We can now prove Age's diagnostics:
+```{r}
+############################
+#proof for Age
+############################
+plot(housing$Age, housing$log_income,
+     main = "Income by Age",
+     xlab = "Age", ylab = "Log(Income)")
+lm_A <- lm(housing$Age~housing$log_income)
+
+#checking the diagnostics for Age
+qqPlot(lm_A$residuals)
+residualPlot(lm_A, main = "Age") #constant spread, mean == 0, patternless
+
+```
+
+Age passes all diagnostics able to be used. However, it has weak correlation to log(income).
+
+
+Now we prove MaintenanceDef's diagnostics:
+```{r}
+##########################################
+#proof for MaintenanceDef
+##########################################
+plot(housing$MaintenanceDef, housing$log_income,
+     main = "Income by MaintenanceDef",
+     xlab = "Maintenance Deficiencies", ylab = "Log(Income)")
+lm_M <- lm(housing$MaintenanceDef~housing$log_income)
+
+#checking the diagnostics for MaintenanceDef
+qqPlot(lm_M$residuals) #normality
+residualPlot(lm_M, main = "MaintenanceDef") #constant spread, mean == 0, patternless
+```
+
+MaintenanceDef Passes.
+
+Now we prove NYCMove's diagnostics:
+```{r}
+############################
+#proof for NYCMove
+############################
+#make the transformations for Age
+plot(housing$NYCMove, housing$log_income,
+     main = "Income by Move",
+     xlab = "Move Year", ylab = "Log(Income)")
+lm_N <- lm(housing$NYCMove~housing$log_income)
+
+
+#checking the diagnostics for MaintenanceDef
+qqPlot(lm_N$residuals) #normality
+residualPlot(lm_N, main = "NYCMove") #constant spread, mean == 0, patternless
+
+
+```
+
+NYCMove passes.
+
+
+Additionally, there is always the idea of multicollinearity with multiple variables and to get rid of variables that may induce an incorrect result we checked if there was strong linear relationships with other variables. 
+
+```{r}
+#####
+# Code chunks for transformations and diagnostics and VIF
+#####
+
+#########################
+#Trying a Regression Model
+#########################
+
+# Fitting a multiple regression model
+multi_model <- lm(log_income ~ MaintenanceDef + NYCMove + Age,
+                  data = housing)
+
+# Output model summary
+pander(summary(multi_model))
+
+pander(vif(multi_model))
+```
+None of the VIF's are >= 2.5;therefore, it should be concluded that there is no multicollinearity 
+
+
+
+```{r}
+#####
+# Regression Model
+#####
+# Fitting a multiple regression model
+multi_model <- lm(log_income ~ MaintenanceDef + NYCMove,
+                  data = housing)
+# Output model summary
+pander(summary(multi_model))
+pander(vif(multi_model))
+
+```
+
+The equation of the final model is:
+
+log(Income) = 11.56  -0.1573(MaintenanceDef) -  -0.0003364(NYCMove)
+
+I picked this model because the R^2 and the R^2 adjusted are the highest than they are adding and taking away the beginning predictor variables, the VIF is within acceptance and the diagnostics are passed.
+
+We see negative Beta value with Maintenance deficiencies which confirms out EDA results. We also see a negative Beta with NYCMove as well which is interesting, albeit not so significant. 
+
++ $\hat{\beta_1}$ = -0.1573. This means, controlling for the other variable in the model, we predict that for an increase of a maintenance deficiency there is a decrease of -0.1573 of log(dollars) in income.
+
++ $\hat{\beta_2}$ = -0.0003364. This means, controlling for the other variable in the model, we predict that for an increase of a year there is a decrease of 0.0003364 of log(dollars) in income. 
+
+
+\ 
+
+# Prediction
+
+I am interested in predicting the income for a household with three maintenance deficiencies and
+whose respondent's age is 53 and who moved to NYC in 1987. Im interested as from the results we concluded that with more maintenance deficiencies there is a lower income. 
+
+```{r, results="hide"}
+#####
+# code chunk for predicting, including intervals
+#####
+lm_out <- lm(log_income~ MaintenanceDef + NYCMove, data = housing)
+new_dat <- tibble(MaintenanceDef = 3 , NYCMove = 1987)
+
+# 95% Prediction Interval for Y given X1 = 53 x2= 3 x3 = 1987
+prediction <-predict(lm_out, newdata = new_dat, interval = "prediction")
+pander(prediction)
+# 95% Confidence Interval for Y given X1 = 53 x2= 3 x3 = 1987
+confidence <-predict(lm_out, newdata = new_dat, interval = "confidence")
+pander(confidence)
+```
+***
+|      Data to predict      |   Prediction Point Estimate   |    95% confidence interval    | 95% prediction interval      |
+|---------------------------|:------------------------------:|:-----------------------------:|:----------------------------:|
+|log(money)~Age=53, Maintenance Deficiency=3,NYCMove = 1987 |  10.41493 |  (10.31306 , 10.5168) | (8.897545, 11.93231)
+|  |                       |           |          |
+|            |        $33353.9004658         |  (30123.473581, 36930.756783) |(7313.99562104,152102.512979)|
+|                           |         converted ^           |             converted ^       |          converted ^         |
+|                           |                               |                               |                              |
+
+***
+The prediction log(income) of a 53 year old, with 3 maintenance deficiencies and moved in in 1987 is 10.41493 ($33353.9004658 converted). This value is considered a mid-lower income situation as it is an income that sits around the first quartile. i am 95% confident that the mean log(income) for all 53 year old person with 3 maintenance deficiencies and had moved into NYC in 1987 is between 10.31306 and 10.5168 in log(dollars). In addition, I am confident that there is a 95% chance that any randomly selected 53 year old with 3 maintenance deficiencies and moved into NYC in 1987 will have a log(income) of 8.897545 11.93231. 
+
+
+
+\ 
+
+# Discussion
+In the analysis of the results of this study, I have leanred that log(income) of a household is related to Maintenane Deficiencies. There were no strong multicollinearity between any variables studied. In the predictors of age and the year that a person moved to NYC there was no significance.
+
+I was honestly surprised to find out that age was no a huge indicator of income until I realized that when people grow older they retire and have less money. The older people also cannot make that money for themselves even if they wanted to probably because of health. I was not surprised that the year was not a terribly big indicator because NYC has been a place that has been the heart of the US and a very expensive place to live for a very long time. It was probably only considered cheaper in a time period before the first year studied, 1942.
+
+I think it is very interesting to study these situations of classes and what benefits or problems there are because of it. It makes people less ignorant and definitely can be eye-opening. I would like to know if the size of the room is an indicator of income as well. That would be my biggest additional question for this study.
+
+
+
+
